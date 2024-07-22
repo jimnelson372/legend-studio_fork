@@ -25,6 +25,7 @@ import {
   CompilationError,
   extractSourceInformationCoordinates,
   reportGraphAnalytics,
+  FileGenerationSpecification,
 } from '@finos/legend-graph';
 import {
   type GeneratorFn,
@@ -37,7 +38,7 @@ import {
   StopWatch,
 } from '@finos/legend-shared';
 import type { Entity } from '@finos/legend-storage';
-import { flowResult } from 'mobx';
+import { action, flowResult } from 'mobx';
 import type { DSL_LegendStudioApplicationPlugin_Extension } from '../LegendStudioApplicationPlugin.js';
 import { FormLocalChangesState } from './sidebar-state/LocalChangesState.js';
 import { GlobalTestRunnerState } from './sidebar-state/testable/GlobalTestRunnerState.js';
@@ -56,6 +57,33 @@ import { LegendStudioTelemetryHelper } from '../../__lib__/LegendStudioTelemetry
 import { GraphEditorMode } from './GraphEditorMode.js';
 import { GlobalBulkServiceRegistrationState } from './sidebar-state/BulkServiceRegistrationState.js';
 import type { TabState } from '@finos/legend-lego/application';
+import type { EditorStore } from './EditorStore.js';
+import { generationSpecification_deleteGenerationElementFromAll } from '../graph-modifier/DSL_Generation_GraphModifierHelper.js';
+
+export const handlePostDeleteAction = action(
+  (element: PackageableElement, editorStore: EditorStore): void => {
+    // this method now ensures that FileGenerationSpecifications are removed
+    // from any GenerationSpecifications, then does the extra PostDelete Actions.
+    if (element instanceof FileGenerationSpecification) {
+      generationSpecification_deleteGenerationElementFromAll(
+        editorStore.graphManagerState.graph.ownGenerationSpecifications,
+        element,
+      );
+    }
+
+    const extraElementEditorPostDeleteActions = editorStore.pluginManager
+      .getApplicationPlugins()
+      .flatMap(
+        (plugin) =>
+          (
+            plugin as DSL_LegendStudioApplicationPlugin_Extension
+          ).getExtraElementEditorPostDeleteActions?.() ?? [],
+      );
+    for (const postDeleteAction of extraElementEditorPostDeleteActions) {
+      postDeleteAction(editorStore, element);
+    }
+  },
+);
 
 export class GraphEditFormModeState extends GraphEditorMode {
   *initialize(): GeneratorFn<void> {
@@ -155,17 +183,7 @@ export class GraphEditFormModeState extends GraphEditorMode {
     );
     graph_deleteElement(this.editorStore.graphManagerState.graph, element);
 
-    const extraElementEditorPostDeleteActions = this.editorStore.pluginManager
-      .getApplicationPlugins()
-      .flatMap(
-        (plugin) =>
-          (
-            plugin as DSL_LegendStudioApplicationPlugin_Extension
-          ).getExtraElementEditorPostDeleteActions?.() ?? [],
-      );
-    for (const postDeleteAction of extraElementEditorPostDeleteActions) {
-      postDeleteAction(this.editorStore, element);
-    }
+    handlePostDeleteAction(element, this.editorStore);
 
     // reprocess project explorer tree
     this.editorStore.explorerTreeState.reprocess();

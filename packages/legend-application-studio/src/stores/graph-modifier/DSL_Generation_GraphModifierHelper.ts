@@ -187,3 +187,28 @@ export const generationSpecification_addGenerationElement = action(
     }
   },
 );
+
+// TODO: Should enhance to support deletion of ModelGenerationSpecification when needed
+export const generationSpecification_deleteGenerationElementFromAll = action(
+  (genSpec: GenerationSpecification[], element: PackageableElement): void => {
+    if (element instanceof FileGenerationSpecification) {
+      // uses forEach in case the FileGeneration is in more than 1 generationSpecification
+      genSpec.forEach((generationSpec) => {
+        const fileGeneration = generationSpec.fileGenerations.find(
+          (entry) => entry.value === element,
+        );
+        if (fileGeneration) {
+          generationSpecification_deleteFileGeneration(
+            generationSpec,
+            fileGeneration,
+          );
+        }
+      });
+    } else {
+      throw new UnsupportedOperationError(
+        `Can't delete generation element: only File generation elements can be deleted from the generation specification`,
+        element,
+      );
+    }
+  },
+);
