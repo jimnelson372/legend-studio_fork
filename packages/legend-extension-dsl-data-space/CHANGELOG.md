@@ -1,5 +1,19 @@
 # @finos/legend-extension-dsl-data-space
 
+## 10.3.46
+
+### Patch Changes
+
+- [#3358](https://github.com/finos/legend-studio/pull/3358) [`6df105a`](https://github.com/finos/legend-studio/commit/6df105a5a1999e5a7f99c0e0366ddd9d7f4eb492) ([@Djakhangir](https://github.com/Djakhangir)) - Added form (FormTextEditor) and state management (FormEditorState) to DataSpace and plugin.
+
+## 10.3.45
+
+## 10.3.44
+
+## 10.3.43
+
+## 10.3.42
+
 ## 10.3.41
 
 ## 10.3.40

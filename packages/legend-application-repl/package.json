@@ -1,6 +1,6 @@
 {
   "name": "@finos/legend-application-repl",
-  "version": "0.0.37",
+  "version": "0.0.41",
   "description": "Legend REPL Grid client application core",
   "keywords": [
     "legend",
@@ -81,7 +81,7 @@
     "npm-run-all": "4.1.5",
     "rimraf": "6.0.1",
     "sass": "1.77.8",
-    "typescript": "5.5.3"
+    "typescript": "5.5.4"
   },
   "peerDependencies": {
     "react": "^18.0.0"

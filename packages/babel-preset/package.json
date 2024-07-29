@@ -1,6 +1,6 @@
 {
   "name": "@finos/babel-preset-legend-studio",
-  "version": "2.0.69",
+  "version": "2.0.70",
   "description": "Legend Studio Babel preset",
   "keywords": [
     "legend",
@@ -42,7 +42,7 @@
     "cross-env": "7.0.3",
     "eslint": "8.57.0",
     "rimraf": "6.0.1",
-    "typescript": "5.5.3"
+    "typescript": "5.5.4"
   },
   "peerDependencies": {
     "@babel/core": "^7.0.0"

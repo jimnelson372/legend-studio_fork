@@ -1,6 +1,6 @@
 {
   "name": "@finos/stylelint-config-legend-studio",
-  "version": "3.0.37",
+  "version": "3.0.38",
   "description": "Legend Studio Stylelint config",
   "keywords": [
     "legend",
@@ -29,7 +29,7 @@
     "publish:snapshot": "node ../../scripts/release/publishDevSnapshot.js"
   },
   "dependencies": {
-    "postcss": "8.4.39",
+    "postcss": "8.4.40",
     "postcss-scss": "4.0.9",
     "stylelint-config-standard": "36.0.1",
     "stylelint-scss": "6.4.1"

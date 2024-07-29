@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 
-export * from '@finos/legend-extension-dsl-diagram';
+export * from './components/DiagramRenderer.js';
 export * from './graph-manager/index.js';

@@ -1,5 +1,25 @@
 # @finos/legend-query-builder
 
+## 4.14.68
+
+## 4.14.67
+
+### Patch Changes
+
+- [#3380](https://github.com/finos/legend-studio/pull/3380) [`ff6cb60`](https://github.com/finos/legend-studio/commit/ff6cb60c2185d86779af066ebce269121edfd0e4) ([@travisstebbins](https://github.com/travisstebbins)) - Fix styling of derived property editor button in filter panel
+
+## 4.14.66
+
+## 4.14.65
+
+## 4.14.64
+
+### Patch Changes
+
+- [#3370](https://github.com/finos/legend-studio/pull/3370) [`30425cb`](https://github.com/finos/legend-studio/commit/30425cb96c568bedebf2e54425a1fc9ca965bced) ([@travisstebbins](https://github.com/travisstebbins)) - Fix styling of show in tree button in light mode
+
+- [#3340](https://github.com/finos/legend-studio/pull/3340) [`de22308`](https://github.com/finos/legend-studio/commit/de22308b1a931e73aabf363b78b6ab3ce917fd47) ([@travisstebbins](https://github.com/travisstebbins)) - Allow DND column and explorer property to filter condition
+
 ## 4.14.63
 
 ## 4.14.62
