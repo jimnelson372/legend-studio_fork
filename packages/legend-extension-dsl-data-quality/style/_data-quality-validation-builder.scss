@@ -1091,10 +1091,31 @@
 
 .data-quality-validation-graph-fetch-constraints-selection {
   width: 100%;
+  height: 100%;
+
+  &__validation {
+    display: flex;
+    align-items: center;
+
+    &__msg {
+      line-height: 2rem;
+      color: var(--color-yellow-200);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1.2rem;
+      user-select: none;
+    }
+
+    &__icon {
+      margin-right: 0.5rem;
+      color: var(--color-yellow-200);
+    }
+  }
 
   &__structural-attributes {
     display: flex;
-    justify-content: right;
+    justify-content: space-between;
+    margin-left: 1rem;
+    margin-right: 1rem;
   }
 
   &__config-group {
@@ -1136,13 +1157,12 @@
       flex-direction: column;
       width: 100%;
       padding: 0.5rem 0 0 0.5rem;
-      border-left: 0.5rem solid var(--color-dark-grey-280);
     }
 
     &__item {
-      @include flexVCenter;
-
+      height: 100%;
       width: 100%;
+      overflow-y: scroll;
     }
 
     &__item__label {
