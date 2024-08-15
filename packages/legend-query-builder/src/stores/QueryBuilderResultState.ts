@@ -17,10 +17,10 @@
 import { action, flow, makeObservable, observable } from 'mobx';
 import {
   type GeneratorFn,
+  type ContentType,
   assertErrorThrown,
   LogEvent,
   guaranteeNonNullable,
-  type ContentType,
   ActionState,
   StopWatch,
   getContentTypeFileExtension,
@@ -32,11 +32,14 @@ import {
   type RawLambda,
   type EXECUTION_SERIALIZATION_FORMAT,
   type QueryGridConfig,
+  type ExecutionResultWithMetadata,
   GRAPH_MANAGER_EVENT,
   buildRawLambdaFromLambdaFunction,
   reportGraphAnalytics,
+  TDSExecutionResult,
+  V1_ZIPKIN_TRACE_HEADER,
+  ExecutionError,
 } from '@finos/legend-graph';
-
 import { buildLambdaFunction } from './QueryBuilderValueSpecificationBuilder.js';
 import {
   buildExecutionParameterValues,
@@ -49,6 +52,7 @@ import { ExecutionPlanState } from './execution-plan/ExecutionPlanState.js';
 import type { DataGridColumnState } from '@finos/legend-lego/data-grid';
 import { downloadStream } from '@finos/legend-application';
 import { QueryBuilderDataGridCustomAggregationFunction } from '../components/result/tds/QueryBuilderTDSGridResult.js';
+import { QueryBuilderTDSState } from './fetch-structure/tds/QueryBuilderTDSState.js';
 
 export const DEFAULT_LIMIT = 1000;
 
@@ -125,10 +129,13 @@ export class QueryBuilderResultState {
   isRunningQuery = false;
   isGeneratingPlan = false;
   executionResult?: ExecutionResult | undefined;
+  isExecutionResultOverflowing = false;
   executionDuration?: number | undefined;
+  executionTraceId?: string;
   latestRunHashCode?: string | undefined;
-  queryRunPromise: Promise<ExecutionResult> | undefined = undefined;
+  queryRunPromise: Promise<ExecutionResultWithMetadata> | undefined = undefined;
   isQueryUsageViewerOpened = false;
+  executionError: Error | string | undefined;
 
   selectedCells: QueryBuilderTDSResultCellData[];
   mousedOverCell: QueryBuilderTDSResultCellData | null = null;
@@ -140,6 +147,7 @@ export class QueryBuilderResultState {
   constructor(queryBuilderState: QueryBuilderState) {
     makeObservable(this, {
       executionResult: observable,
+      executionTraceId: observable,
       previewLimit: observable,
       executionDuration: observable,
       latestRunHashCode: observable,
@@ -150,13 +158,16 @@ export class QueryBuilderResultState {
       isRunningQuery: observable,
       isSelectingCells: observable,
       isQueryUsageViewerOpened: observable,
+      isExecutionResultOverflowing: observable,
       gridConfig: observable,
       wavgAggregationState: observable,
+      executionError: observable,
       setGridConfig: action,
       setWavgAggregationState: action,
       setIsSelectingCells: action,
       setIsRunningQuery: action,
       setExecutionResult: action,
+      setExecutionTraceId: action,
       setExecutionDuration: action,
       setPreviewLimit: action,
       addSelectedCell: action,
@@ -164,8 +175,10 @@ export class QueryBuilderResultState {
       setMouseOverCell: action,
       setQueryRunPromise: action,
       setIsQueryUsageViewerOpened: action,
+      setIsExecutionResultOverflowing: action,
       handlePreConfiguredGridConfig: action,
       updatePreviewLimitInConfig: action,
+      setExecutionError: action,
       exportData: flow,
       runQuery: flow,
       cancelQuery: flow,
@@ -204,6 +217,10 @@ export class QueryBuilderResultState {
     this.executionResult = val;
   }
 
+  setExecutionTraceId(val: string): void {
+    this.executionTraceId = val;
+  }
+
   setExecutionDuration(val: number | undefined): void {
     this.executionDuration = val;
   }
@@ -224,7 +241,9 @@ export class QueryBuilderResultState {
     this.mousedOverCell = val;
   }
 
-  setQueryRunPromise(promise: Promise<ExecutionResult> | undefined): void {
+  setQueryRunPromise(
+    promise: Promise<ExecutionResultWithMetadata> | undefined,
+  ): void {
     this.queryRunPromise = promise;
   }
 
@@ -232,11 +251,43 @@ export class QueryBuilderResultState {
     this.isQueryUsageViewerOpened = val;
   }
 
+  setExecutionError(val: Error | string | undefined): void {
+    this.executionError = val;
+  }
+
+  setIsExecutionResultOverflowing(val: boolean): void {
+    this.isExecutionResultOverflowing = val;
+  }
+
   updatePreviewLimitInConfig(): void {
     if (this.gridConfig) {
       this.gridConfig.previewLimit = this.previewLimit;
     }
   }
+
+  getExecutionResultLimit = (): number =>
+    Math.min(
+      this.queryBuilderState.fetchStructureState.implementation instanceof
+        QueryBuilderTDSState &&
+        this.queryBuilderState.fetchStructureState.implementation
+          .resultSetModifierState.limit
+        ? this.queryBuilderState.fetchStructureState.implementation
+            .resultSetModifierState.limit
+        : Number.MAX_SAFE_INTEGER,
+      this.previewLimit,
+    );
+
+  processExecutionResult = (result: ExecutionResult): void => {
+    this.setIsExecutionResultOverflowing(false);
+    if (result instanceof TDSExecutionResult) {
+      const resultLimit = this.getExecutionResultLimit();
+      if (result.result.rows.length > resultLimit) {
+        this.setIsExecutionResultOverflowing(true);
+        result.result.rows = result.result.rows.slice(0, resultLimit);
+      }
+    }
+    this.setExecutionResult(result);
+  };
 
   processWeightedColumnPairsMap(
     config: QueryGridConfig,
@@ -421,7 +472,9 @@ export class QueryBuilderResultState {
         this.queryBuilderState.executionContextState.runtimeValue,
         `Runtime is required to execute query`,
       );
-      const query = this.buildExecutionRawLambda();
+      const query = this.buildExecutionRawLambda({
+        withDataOverflowCheck: true,
+      });
       const parameterValues = buildExecutionParameterValues(
         this.queryBuilderState.parametersState.parameterStates,
         this.queryBuilderState.graphManagerState,
@@ -444,13 +497,17 @@ export class QueryBuilderResultState {
         {
           parameterValues,
           convertUnsafeNumbersToString: true,
+          preservedResponseHeadersList: [V1_ZIPKIN_TRACE_HEADER],
         },
       );
 
       this.setQueryRunPromise(promise);
-      const result = (yield promise) as ExecutionResult;
+      const result = (yield promise) as ExecutionResultWithMetadata;
       if (this.queryRunPromise === promise) {
-        this.setExecutionResult(result);
+        this.processExecutionResult(result.executionResult);
+        if (result.executionTraceId) {
+          this.setExecutionTraceId(result.executionTraceId);
+        }
         this.latestRunHashCode = currentHashCode;
         this.setExecutionDuration(stopWatch.elapsed);
 
@@ -479,9 +536,10 @@ export class QueryBuilderResultState {
           LogEvent.create(GRAPH_MANAGER_EVENT.EXECUTION_FAILURE),
           error,
         );
-        this.queryBuilderState.applicationStore.notificationService.notifyError(
-          error,
-        );
+        this.setExecutionError(error);
+        if (error instanceof ExecutionError && error.executionTraceId) {
+          this.setExecutionTraceId(error.executionTraceId);
+        }
       }
     } finally {
       this.setIsRunningQuery(false);

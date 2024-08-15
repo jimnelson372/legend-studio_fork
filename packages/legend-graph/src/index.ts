@@ -276,9 +276,10 @@ export * from './graph-manager/GraphManagerStatistics.js';
 export * from './graph-manager/GraphManagerUtils.js';
 export * from './__lib__/GraphManagerEvent.js';
 export {
+  type ExecutionResultWithMetadata,
   RelationalExecutionActivities,
   ExecutionResult,
-  TDSExecutionResult as TDSExecutionResult,
+  TDSExecutionResult,
   RawExecutionResult,
   EXECUTION_SERIALIZATION_FORMAT,
   TDSRow,
@@ -286,6 +287,7 @@ export {
   TabularDataSet,
   INTERNAL__TDSColumn,
 } from './graph-manager/action/execution/ExecutionResult.js';
+export { ExecutionError } from './graph-manager/action/ExecutionError.js';
 export { ExternalFormatDescription } from './graph-manager/action/externalFormat/ExternalFormatDescription.js';
 export * from './graph-manager/action/generation/ArtifactGenerationExtensionResult.js';
 export * from './graph-manager/action/execution/ExecutionResultHelper.js';

@@ -52,6 +52,7 @@ import {
   Class,
   Enumeration,
   PrimitiveType,
+  VariableExpression,
 } from '@finos/legend-graph';
 import {
   assertErrorThrown,
@@ -317,7 +318,10 @@ const QueryBuilderPostFilterConditionEditor = observer(
         const conditionValueType =
           node.condition.leftConditionValue.getColumnType();
         if (canDropTypeOntoNodeValue(itemType, node.condition)) {
-          if (type === QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE) {
+          if (
+            type === QUERY_BUILDER_PROJECTION_COLUMN_DND_TYPE ||
+            type === QUERY_BUILDER_WINDOW_COLUMN_DND_TYPE
+          ) {
             const columnState = (item as QueryBuilderProjectionColumnDragSource)
               .columnState;
             node.condition.setRightConditionVal(
@@ -419,10 +423,21 @@ const QueryBuilderPostFilterConditionEditor = observer(
         rightConditionValue instanceof PostFilterValueSpecConditionValueState &&
         rightConditionValue.value
       ) {
+        const isInvalidVariable =
+          rightConditionValue.value instanceof VariableExpression &&
+          node.condition.postFilterState.isInvalidValueSpecPostFilterValue(
+            node,
+          );
         return (
           <div
             ref={dropConnector}
-            className="query-builder-post-filter-tree__condition-node__value"
+            className={clsx(
+              'query-builder-post-filter-tree__condition-node__value',
+              {
+                'query-builder-post-filter-tree__condition-node__value--error':
+                  isInvalidVariable,
+              },
+            )}
           >
             <PanelEntryDropZonePlaceholder
               isDragOver={isFilterValueDragOver}
@@ -453,10 +468,20 @@ const QueryBuilderPostFilterConditionEditor = observer(
         rightConditionValue instanceof
         PostFilterTDSColumnValueConditionValueState
       ) {
+        const isInvalidTDSColumn =
+          node.condition.postFilterState.isInvalidTDSColumnPostFilterValue(
+            node,
+          );
         return (
           <div
             ref={dropConnector}
-            className="query-builder-post-filter-tree__condition-node__value"
+            className={clsx(
+              'query-builder-post-filter-tree__condition-node__value',
+              {
+                'query-builder-post-filter-tree__condition-node__value--error':
+                  isInvalidTDSColumn,
+              },
+            )}
           >
             <PanelEntryDropZonePlaceholder
               isDragOver={isFilterValueDragOver}
@@ -1047,7 +1072,7 @@ const QueryBuilderPostFilterPanelContent = observer(
       [applicationStore, handleDrop],
     );
 
-    const addPostFilterRef = useRef<HTMLInputElement>(null);
+    const addPostFilterRef = useRef<HTMLDivElement>(null);
     dropTargetConnector(addPostFilterRef);
 
     return (

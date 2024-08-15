@@ -1,5 +1,41 @@
 # @finos/legend-query-builder
 
+## 4.14.72
+
+### Patch Changes
+
+- [#3409](https://github.com/finos/legend-studio/pull/3409) [`eae9ead`](https://github.com/finos/legend-studio/commit/eae9ead488b2b5f84cc1f75bffaf0ec42eb93464) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Move query loader search sort-by to mongodb
+
+- [#3414](https://github.com/finos/legend-studio/pull/3414) [`ca421ff`](https://github.com/finos/legend-studio/commit/ca421ff1b2484762a2443446dfe8aa70973c48ef) ([@travisstebbins](https://github.com/travisstebbins)) - Improve handling of changing const/param/derivation types
+
+- [#3413](https://github.com/finos/legend-studio/pull/3413) [`8a0e517`](https://github.com/finos/legend-studio/commit/8a0e5170d0f5f81efd788384e759ff4e38585d8a) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Display data rounding warning next to column name in Result Grid
+
+- [#3417](https://github.com/finos/legend-studio/pull/3417) [`2231e0a`](https://github.com/finos/legend-studio/commit/2231e0a654fd1f3bbb12f90b2e23a1ff2ed2fef0) ([@travisstebbins](https://github.com/travisstebbins)) - Resize query options modal
+
+## 4.14.71
+
+### Patch Changes
+
+- [#3408](https://github.com/finos/legend-studio/pull/3408) [`da47022`](https://github.com/finos/legend-studio/commit/da47022fd906aa442539745bb68d4706371e418d) ([@travisstebbins](https://github.com/travisstebbins)) - Fix bug with calculated constant modal
+
+- [#3411](https://github.com/finos/legend-studio/pull/3411) [`09e6525`](https://github.com/finos/legend-studio/commit/09e6525b5916b0de7afea363d8d5a0dd2b8420ea) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Revert display data rounding warning
+
+## 4.14.70
+
+### Patch Changes
+
+- [#3405](https://github.com/finos/legend-studio/pull/3405) [`b71a3bb`](https://github.com/finos/legend-studio/commit/b71a3bb3357d6383b1661b16563f6e75ad48ebea) ([@travisstebbins](https://github.com/travisstebbins)) - Allow DND filter node to fetch structure panel
+
+- [#3393](https://github.com/finos/legend-studio/pull/3393) [`03a118e`](https://github.com/finos/legend-studio/commit/03a118ef9f934a07bee05a7342a6fcd6154e6c27) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Show zipkin trace id for query execution
+
+- [#3404](https://github.com/finos/legend-studio/pull/3404) [`9a191d7`](https://github.com/finos/legend-studio/commit/9a191d7c2b6cfac9820792650aef6ad36c7c2459) ([@travisstebbins](https://github.com/travisstebbins)) - Allow DND window function column to post-filter panel value
+
+- [#3389](https://github.com/finos/legend-studio/pull/3389) [`496be89`](https://github.com/finos/legend-studio/commit/496be891d1716f3e016c09012e07fa116fd9e0ae) ([@travisstebbins](https://github.com/travisstebbins)) - Improve property search
+
+- [#3403](https://github.com/finos/legend-studio/pull/3403) [`f3a8062`](https://github.com/finos/legend-studio/commit/f3a80622d4a8005fdb44bd5d7211172b255479e9) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Add data incomplete warning
+
+- [#3377](https://github.com/finos/legend-studio/pull/3377) [`9195bbf`](https://github.com/finos/legend-studio/commit/9195bbfe76afbd806eccea19a854748ba0144351) ([@YannanGao-gs](https://github.com/YannanGao-gs)) - Move query execution error message into query builder result panel, highlight entitlement errors, show no data warning, show data incompleteness warning and show data rounding warning
+
 ## 4.14.69
 
 ### Patch Changes

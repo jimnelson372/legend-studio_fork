@@ -68,6 +68,7 @@ import {
   FilterPropertyExpressionStateConditionValueState,
   isCollectionProperty,
   type QueryBuilderFilterValueDropTarget,
+  isExistsNodeChild,
 } from '../../stores/filter/QueryBuilderFilterState.js';
 import { useDrag, useDragLayer, useDrop } from 'react-dnd';
 import {
@@ -830,6 +831,7 @@ const QueryBuilderFilterConditionEditor = observer(
     const queryBuilderState = node.condition.filterState.queryBuilderState;
     const rightConditionValue = node.condition.rightConditionValue;
     const applicationStore = useApplicationStore();
+    const isNodeExistsNodeChild = isExistsNodeChild(node);
 
     // Drag and Drop on filter condition value
     const handleDrop = useCallback(
@@ -845,7 +847,7 @@ const QueryBuilderFilterConditionEditor = observer(
                 type === QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.ENUM_PROPERTY ||
                 type ===
                   QUERY_BUILDER_EXPLORER_TREE_DND_TYPE.PRIMITIVE_PROPERTY) &&
-              node.isExistsNodeChild
+              isNodeExistsNodeChild
             ) {
               throw new UnsupportedOperationError(
                 'Collection filter does not support property for filter condition value.',
@@ -931,8 +933,8 @@ const QueryBuilderFilterConditionEditor = observer(
       [
         applicationStore,
         queryBuilderState,
+        isNodeExistsNodeChild,
         node.condition,
-        node.isExistsNodeChild,
       ],
     );
 
@@ -1018,13 +1020,22 @@ const QueryBuilderFilterConditionEditor = observer(
         rightConditionValue instanceof FilterValueSpecConditionValueState &&
         rightConditionValue.value
       ) {
+        const isInvalidVariable =
+          rightConditionValue.value instanceof VariableExpression &&
+          node.condition.filterState.isInvalidValueSpecFilterValue(node);
         return (
           <div
             ref={dropConnector}
             data-testid={
               QUERY_BUILDER_TEST_ID.QUERY_BUILDER_FILTER_TREE_CONDITION_NODE_VALUE
             }
-            className="query-builder-filter-tree__condition-node__value"
+            className={clsx(
+              'query-builder-filter-tree__condition-node__value',
+              {
+                'query-builder-filter-tree__condition-node__value--error':
+                  isInvalidVariable,
+              },
+            )}
           >
             <PanelEntryDropZonePlaceholder
               isDragOver={isFilterValueDragOver}

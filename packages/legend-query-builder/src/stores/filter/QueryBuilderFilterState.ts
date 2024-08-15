@@ -40,12 +40,12 @@ import {
   type ExecutionResult,
   AbstractPropertyExpression,
   type ValueSpecification,
-  type VariableExpression,
   type Type,
   observe_ValueSpecification,
   CollectionInstanceValue,
   InstanceValue,
   SimpleFunctionExpression,
+  VariableExpression,
   matchFunctionName,
 } from '@finos/legend-graph';
 import { DEFAULT_LAMBDA_VARIABLE_NAME } from '../QueryBuilderConfig.js';
@@ -61,6 +61,7 @@ import { QUERY_BUILDER_STATE_HASH_STRUCTURE } from '../QueryBuilderStateHashUtil
 import {
   getCollectionValueSpecificationType,
   getNonCollectionValueSpecificationType,
+  isTypeCompatibleForAssignment,
   isValidInstanceValue,
   isValueExpressionReferencedInValue,
 } from '../QueryBuilderValueSpecificationHelper.js';
@@ -571,6 +572,40 @@ export class QueryBuilderFilterTreeExistsNodeData
   }
 }
 
+export const isExistsNodeChild = (
+  node: QueryBuilderFilterTreeConditionNodeData,
+): boolean => {
+  let parentNode = node.condition.filterState.getParentNode(node);
+  while (parentNode !== undefined) {
+    if (parentNode instanceof QueryBuilderFilterTreeExistsNodeData) {
+      return true;
+    }
+    parentNode = node.condition.filterState.getParentNode(parentNode);
+  }
+  return false;
+};
+
+/**
+ *
+ * @param node the node from which to start searching
+ * @returns the furthest away parent node that is an exists node, or
+ *          undefined if none exists.
+ */
+export const getFurthestExistsNodeParent = (
+  node: QueryBuilderFilterTreeConditionNodeData,
+): QueryBuilderFilterTreeExistsNodeData | undefined => {
+  let furthestExistsNode: QueryBuilderFilterTreeExistsNodeData | undefined =
+    undefined;
+  let parentNode = node.condition.filterState.getParentNode(node);
+  while (parentNode) {
+    if (parentNode instanceof QueryBuilderFilterTreeExistsNodeData) {
+      furthestExistsNode = parentNode;
+    }
+    parentNode = node.condition.filterState.getParentNode(parentNode);
+  }
+  return furthestExistsNode;
+};
+
 export class QueryBuilderFilterTreeConditionNodeData
   extends QueryBuilderFilterTreeNodeData
   implements Hashable
@@ -594,17 +629,6 @@ export class QueryBuilderFilterTreeConditionNodeData
 
   setIsNewlyAdded(val: boolean): void {
     this.isNewlyAdded = val;
-  }
-
-  get isExistsNodeChild(): boolean {
-    let parentNode = this.condition.filterState.getParentNode(this);
-    while (parentNode !== undefined) {
-      if (parentNode instanceof QueryBuilderFilterTreeExistsNodeData) {
-        return true;
-      }
-      parentNode = this.condition.filterState.getParentNode(parentNode);
-    }
-    return false;
   }
 
   get dragPreviewLabel(): string {
@@ -1162,8 +1186,15 @@ export class QueryBuilderFilterState
       node instanceof QueryBuilderFilterTreeConditionNodeData &&
       node.condition.rightConditionValue instanceof
         FilterValueSpecConditionValueState &&
-      node.condition.rightConditionValue.value instanceof InstanceValue &&
-      !isValidInstanceValue(node.condition.rightConditionValue.value)
+      ((node.condition.rightConditionValue.value instanceof InstanceValue &&
+        !isValidInstanceValue(node.condition.rightConditionValue.value)) ||
+        (node.condition.rightConditionValue.value instanceof
+          VariableExpression &&
+          !isTypeCompatibleForAssignment(
+            node.condition.propertyExpressionState.propertyExpression.func.value
+              .genericType.value.rawType,
+            node.condition.rightConditionValue.value.genericType?.value.rawType,
+          )))
     );
   }
 

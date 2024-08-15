@@ -44,6 +44,8 @@ import {
   ReportIcon,
   CubesLoadingIndicatorIcon,
   CubesLoadingIndicator,
+  InfoCircleIcon,
+  ShareBoxIcon,
 } from '@finos/legend-art';
 import { observer } from 'mobx-react-lite';
 import { flowResult } from 'mobx';
@@ -77,6 +79,108 @@ import { QueryBuilderTDSSimpleGridResult } from './tds/QueryBuilderTDSSimpleGrid
 import { getExecutedSqlFromExecutionResult } from './tds/QueryBuilderTDSResultShared.js';
 import { QueryBuilderTDSGridResult } from './tds/QueryBuilderTDSGridResult.js';
 import type { QueryBuilder_LegendApplicationPlugin_Extension } from '../../stores/QueryBuilder_LegendApplicationPlugin_Extension.js';
+import type { QueryBuilderResultState } from '../../stores/QueryBuilderResultState.js';
+
+const PERMISSION_ERRORS = ['permission denied', 'invalid user id or password'];
+
+export const QueryBuilderExecutionErrorPanel = observer(
+  (props: {
+    resultState: QueryBuilderResultState;
+    executionError: string | Error;
+  }) => {
+    const { resultState, executionError } = props;
+    const queryBuilderState = resultState.queryBuilderState;
+    const errorMessage = executionError
+      ? queryBuilderState.applicationStore.notificationService.getErrorMessage(
+          executionError,
+        )
+      : '';
+    const isPermissionDeniedError = () =>
+      Boolean(
+        PERMISSION_ERRORS.find((e) => errorMessage?.toLowerCase().includes(e)),
+      );
+    const openCheckEntitlmentsEditor = (): void => {
+      queryBuilderState.checkEntitlementsState.setShowCheckEntitlementsViewer(
+        true,
+      );
+    };
+
+    return (
+      <>
+        {isPermissionDeniedError() && (
+          <div className="query-builder__result__permission-error">
+            <div className="query-builder__result__permission-error__header">
+              Entitlement / Authorization error - Please
+            </div>
+            <button
+              className="query-builder__result__permission-error__button"
+              disabled={
+                (queryBuilderState.isQuerySupported &&
+                  queryBuilderState.fetchStructureState
+                    .implementation instanceof QueryBuilderTDSState &&
+                  queryBuilderState.fetchStructureState.implementation
+                    .projectionColumns.length === 0) ||
+                !queryBuilderState.canBuildQuery
+              }
+              onClick={openCheckEntitlmentsEditor}
+            >
+              Click Here to Check Entitlements
+            </button>
+          </div>
+        )}
+        <div className="query-builder__result__execution-error">
+          <div className="query-builder__result__execution-error__header">
+            <span style={{ fontWeight: 'bold' }}>Error Execution Query</span>.
+            Please try again later or review options in application`s
+            <span style={{ fontWeight: 'bold' }}> Help</span> menu.
+          </div>
+          <div className="query-builder__result__execution-error__body">
+            {errorMessage}
+          </div>
+        </div>
+      </>
+    );
+  },
+);
+
+export const QueryBuilderEmptyExecutionResultPanel = observer(
+  (props: { queryBuilderState: QueryBuilderState }) => {
+    const { queryBuilderState } = props;
+
+    const openCheckEntitlmentsEditor = (): void => {
+      queryBuilderState.checkEntitlementsState.setShowCheckEntitlementsViewer(
+        true,
+      );
+    };
+
+    return (
+      <div className="query-builder__result__empty-result-warning">
+        <div className="query-builder__result__empty-result-warning__header">
+          Query returned no data
+        </div>
+        <div className="query-builder__result__empty-result-warning__body">
+          If you believe the query should return data, please
+          <button
+            className="query-builder__result__permission-error__button"
+            disabled={
+              (queryBuilderState.isQuerySupported &&
+                queryBuilderState.fetchStructureState.implementation instanceof
+                  QueryBuilderTDSState &&
+                queryBuilderState.fetchStructureState.implementation
+                  .projectionColumns.length === 0) ||
+              !queryBuilderState.canBuildQuery
+            }
+            onClick={openCheckEntitlmentsEditor}
+          >
+            Click Here to Check Entitlements
+          </button>
+          or See Help menu for more options
+        </div>
+      </div>
+    );
+  },
+);
+import { QueryBuilderBaseInfoTooltip } from '../shared/QueryBuilderPropertyInfoTooltip.js';
 
 export const QueryBuilderResultValues = observer(
   (props: {
@@ -85,20 +189,28 @@ export const QueryBuilderResultValues = observer(
   }) => {
     const { executionResult, queryBuilderState } = props;
     if (executionResult instanceof TDSExecutionResult) {
-      if (queryBuilderState.config?.TEMPORARY__enableGridEnterpriseMode) {
+      if (executionResult.result.rows.length === 0) {
         return (
-          <QueryBuilderTDSGridResult
+          <QueryBuilderEmptyExecutionResultPanel
             queryBuilderState={queryBuilderState}
-            executionResult={executionResult}
           />
         );
       } else {
-        return (
-          <QueryBuilderTDSSimpleGridResult
-            queryBuilderState={queryBuilderState}
-            executionResult={executionResult}
-          />
-        );
+        if (queryBuilderState.config?.TEMPORARY__enableGridEnterpriseMode) {
+          return (
+            <QueryBuilderTDSGridResult
+              queryBuilderState={queryBuilderState}
+              executionResult={executionResult}
+            />
+          );
+        } else {
+          return (
+            <QueryBuilderTDSSimpleGridResult
+              queryBuilderState={queryBuilderState}
+              executionResult={executionResult}
+            />
+          );
+        }
       }
     } else if (executionResult instanceof RawExecutionResult) {
       const inputValue =
@@ -134,6 +246,7 @@ export const QueryBuilderResultPanel = observer(
     const resultState = queryBuilderState.resultState;
     const queryParametersState = queryBuilderState.parametersState;
     const executionResult = resultState.executionResult;
+    const resultLimit = resultState.getExecutionResultLimit();
     const [showSqlModal, setShowSqlModal] = useState(false);
     const executedSql = executionResult
       ? getExecutedSqlFromExecutionResult(executionResult, true)
@@ -211,6 +324,7 @@ export const QueryBuilderResultPanel = observer(
 
     const runQuery = (): void => {
       resultState.setSelectedCells([]);
+      resultState.setExecutionError(undefined);
       resultState.pressedRunQuery.inProgress();
       if (
         queryParametersState.parameterStates.length &&
@@ -278,8 +392,7 @@ export const QueryBuilderResultPanel = observer(
           })
         : undefined;
       if (_executionResult instanceof TDSExecutionResult) {
-        const rowLength = _executionResult.result.rows.length;
-        return `${rowLength} row(s)${
+        return `${_executionResult.result.rows.length} row(s)${
           queryDuration ? ` in ${queryDuration}` : ''
         }`;
       }
@@ -290,7 +403,9 @@ export const QueryBuilderResultPanel = observer(
     };
     const resultDescription = executionResult
       ? getResultSetDescription(executionResult)
-      : undefined;
+      : resultState.executionError
+        ? 'fail to execute'
+        : undefined;
 
     const [previewLimitValue, setPreviewLimitValue] = useState(
       resultState.previewLimit,
@@ -419,13 +534,62 @@ export const QueryBuilderResultPanel = observer(
                 Running Query...
               </div>
             )}
-
-            <div
-              data-testid={QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_ANALYTICS}
-              className="query-builder__result__analytics"
-            >
-              {resultDescription ?? ''}
-            </div>
+            {resultDescription && resultState.executionTraceId && (
+              <div
+                data-testid={
+                  QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_ANALYTICS
+                }
+                className="query-builder__result__analytics"
+              >
+                <QueryBuilderBaseInfoTooltip
+                  title="Execution Result Analytics"
+                  data={[
+                    {
+                      label: 'Trace',
+                      value: 'available here',
+                      actionButton: (
+                        <div className="query-builder__tooltip__item__action">
+                          <button
+                            disabled={
+                              !queryBuilderState.config?.zipkinTraceBaseURL
+                            }
+                            title={
+                              queryBuilderState.config?.zipkinTraceBaseURL
+                                ? ''
+                                : 'No zipkin trace URL configured'
+                            }
+                            onClick={() => {
+                              if (
+                                queryBuilderState.config?.zipkinTraceBaseURL
+                              ) {
+                                applicationStore.navigationService.navigator.visitAddress(
+                                  queryBuilderState.config.zipkinTraceBaseURL +
+                                    resultState.executionTraceId,
+                                );
+                              }
+                            }}
+                          >
+                            <ShareBoxIcon />
+                          </button>
+                        </div>
+                      ),
+                    },
+                  ]}
+                >
+                  <div className="editable-value">{resultDescription}</div>
+                </QueryBuilderBaseInfoTooltip>
+              </div>
+            )}
+            {resultDescription && !resultState.executionTraceId && (
+              <div
+                data-testid={
+                  QUERY_BUILDER_TEST_ID.QUERY_BUILDER_RESULT_ANALYTICS
+                }
+                className="query-builder__result__analytics"
+              >
+                {resultDescription}
+              </div>
+            )}
             {executionResult && resultState.checkForStaleResults && (
               <div className="query-builder__result__stale-status">
                 <div className="query-builder__result__stale-status__icon">
@@ -436,6 +600,25 @@ export const QueryBuilderResultPanel = observer(
                 </div>
               </div>
             )}
+            {executionResult &&
+              executionResult instanceof TDSExecutionResult &&
+              resultState.isExecutionResultOverflowing && (
+                <div className="query-builder__result__stale-status">
+                  <div className="query-builder__result__stale-status__icon">
+                    <ExclamationTriangleIcon />
+                  </div>
+                  <div className="query-builder__result__stale-status__label">
+                    Data below is not complete - query produces more rows than
+                    the set grid preview limit
+                  </div>
+                  <div
+                    className="query-builder__result__stale-status__icon"
+                    title={`The preview limit is set to ${resultLimit}. The results in the grid below are being limited by this limit and running query with a higher limit would produce more rows. Export will not apply this limit.`}
+                  >
+                    <InfoCircleIcon />
+                  </div>
+                </div>
+              )}
           </div>
           <div className="panel__header__actions query-builder__result__header__actions">
             {resultState.exportState.isInProgress && (
@@ -638,12 +821,18 @@ export const QueryBuilderResultPanel = observer(
           <CubesLoadingIndicator isLoading={isLoading}>
             <CubesLoadingIndicatorIcon />
           </CubesLoadingIndicator>
-          {!executionResult && !isLoading && (
+          {!executionResult && !isLoading && !resultState.executionError && (
             <BlankPanelContent>
               Build or load a valid query first
             </BlankPanelContent>
           )}
-          {executionResult && !isLoading && (
+          {!isLoading && resultState.executionError && (
+            <QueryBuilderExecutionErrorPanel
+              resultState={resultState}
+              executionError={resultState.executionError}
+            />
+          )}
+          {executionResult && !isLoading && !resultState.executionError && (
             <div className="query-builder__result__values">
               <QueryBuilderResultValues
                 executionResult={executionResult}
